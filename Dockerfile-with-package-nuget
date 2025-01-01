@@ -1,0 +1,49 @@
+# Base image para o ambiente de runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+
+# Exposição de portas
+EXPOSE 8080
+EXPOSE 8081
+
+# Image para o ambiente de build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+# Copiando os arquivos .csproj e restaurando as dependências
+COPY ["PROJECT.Api/PROJECT.Api.csproj", "PROJECT.Api/"]
+# ADICIONAR DEMAIS PROJETOS ...
+
+# Copiar o conteúdo da pasta Resources para dentro do container
+COPY Resources /Resources
+
+# Configurar o nuget para usar o repositório local
+RUN dotnet nuget add source /Resources --name LocalPackages
+
+# Restaurando as dependências incluindo pacotes locais
+RUN dotnet restore "PROJECT.Api/PROJECT.Api.csproj"
+
+# Copiando o restante do código fonte e rodando o build
+COPY . .
+WORKDIR "/src/PROJECT.Api"
+RUN dotnet build "PROJECT.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Instalando a ferramenta dotnet-ef
+RUN dotnet tool install --global dotnet-ef
+
+# Adicionando a ferramenta dotnet-ef ao PATH
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+# Publicando a aplicação
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "PROJECT.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# Etapa final - configurando a imagem para execução
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+
+# Comando de entrada para iniciar a aplicação
+ENTRYPOINT ["dotnet", "PROJECT.Api.dll"]
