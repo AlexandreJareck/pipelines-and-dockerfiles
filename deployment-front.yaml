@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-front
+  template:
+    metadata:
+      labels:
+        app: project-front
+    spec:
+      containers:
+        - name: project-front
+          image: registry.digitalocean.com/project/name-project:latest
+          ports:
+            - containerPort: 4000
+              name: http
