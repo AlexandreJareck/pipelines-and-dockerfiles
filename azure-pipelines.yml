@@ -1,0 +1,48 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool: Default
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+jobs:
+  - job: BuildAndTest
+    displayName: 'Build e Teste da Solução'
+    
+    steps:
+      - task: NuGetToolInstaller@1
+        displayName: 'Instalar NuGet'
+
+      - task: NuGetCommand@2
+        displayName: 'Restaurar pacotes NuGet'
+        inputs:
+          restoreSolution: '$(solution)'
+
+      - task: VSBuild@1
+        displayName: 'Build da solução'
+        inputs:
+          solution: '$(solution)'
+          msbuildArgs: >-
+            /p:DeployOnBuild=true 
+            /p:WebPublishMethod=Package 
+            /p:PackageAsSingleFile=true 
+            /p:SkipInvalidConfigurations=true 
+            /p:PackageLocation="$(build.artifactStagingDirectory)"
+          platform: '$(buildPlatform)'
+          configuration: '$(buildConfiguration)'
+
+      - task: VSTest@2
+        displayName: 'Executar testes'
+        inputs:
+          platform: '$(buildPlatform)'
+          configuration: '$(buildConfiguration)'
