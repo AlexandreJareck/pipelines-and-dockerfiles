@@ -35,6 +35,25 @@ services:
       ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
     networks: 
         - observability
+        
+  metricbeat: 
+    image: docker.elastic.co/beats/metricbeat:8.17.0
+    container_name: metricbeat
+    user: root
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./beats/metric/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /proc:/hostfs/proc:ro
+      - /:/hostfs:ro
+    command: ["metricbeat", "-e", "--strict.perms=false"]
+    restart: on-failure
+    networks:
+      - observability
+    depends_on:
+      - elasticsearch
+      - kibana
+      
 networks:
   observability:
     driver: bridge
